@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบตรวจให้คะแนนเกมนักเรียน</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600&display=swap');
+        body { font-family: 'Kanit', sans-serif; }
+        .star-rating {
+            display: flex;
+            flex-direction: row-reverse;
+            justify-content: flex-end;
+        }
+        .star-rating input { display: none; }
+        .star-rating label {
+            font-size: 1.5rem;
+            color: #ddd;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+        .star-rating input:checked ~ label,
+        .star-rating label:hover,
+        .star-rating label:hover ~ label {
+            color: #f59e0b;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+
+    <div class="max-w-7xl mx-auto p-6">
+        <!-- Header -->
+        <div class="bg-white rounded-2xl shadow-sm p-8 mb-6 border border-gray-100">
+            <h1 class="text-3xl font-bold text-gray-800 mb-2">🎮 ระบบตรวจให้คะแนนเกม</h1>
+            <p class="text-gray-500 text-sm">ดึงข้อมูลจาก Google Sheets และบันทึกคะแนนพร้อมความคิดเห็นอัตโนมัติ</p>
+            
+            <div class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">ชื่อผู้ตรวจ (Judge Name)</label>
+                    <input type="text" id="judgeName" placeholder="กรอกชื่อของคุณ" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                </div>
+                <div class="flex items-end">
+                    <button onclick="fetchData()" id="loadBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg transition-colors flex items-center gap-2">
+                        <span>🔄 โหลดข้อมูลนักเรียน</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div id="loading" class="hidden text-center py-10">
+            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+            <p class="mt-4 text-gray-600">กำลังดำเนินการ...</p>
+        </div>
+
+        <!-- Grid Container Adjusted to 3 Columns -->
+        <div id="studentList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <!-- ข้อมูลจะแสดงที่นี่ -->
+            <div class="col-span-full text-center py-12 text-gray-400 border-2 border-dashed border-gray-200 rounded-2xl">
+                กรุณากดปุ่ม "โหลดข้อมูลนักเรียน" เพื่อเริ่มตรวจ
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Toast -->
+    <div id="toast" class="fixed bottom-5 right-5 transform translate-y-20 opacity-0 transition-all duration-300 bg-gray-800 text-white px-6 py-3 rounded-xl shadow-lg">
+        ข้อความแจ้งเตือน
+    </div>
+
+    <script>
+        // *** ตั้งค่า URL ของ Google Apps Script ของคุณที่นี่ ***
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx2NU2SsvkTZ6js6-pJnZhBFQVPaQiMrUVduyymWKOTcle047t0w4v8yDlvYbMGdmmEQw/exec";
+
+        function showToast(msg, isError = false) {
+            const toast = document.getElementById('toast');
+            toast.innerText = msg;
+            toast.className = `fixed bottom-5 right-5 transition-all duration-300 px-6 py-3 rounded-xl shadow-lg ${isError ? 'bg-red-600' : 'bg-green-600'} text-white opacity-100 translate-y-0`;
+            setTimeout(() => {
+                toast.className = 'fixed bottom-5 right-5 transform translate-y-20 opacity-0 transition-all duration-300 bg-gray-800 text-white px-6 py-3 rounded-xl shadow-lg';
+            }, 3000);
+        }
+
+        async function fetchData() {
+            if (!SCRIPT_URL.includes("http")) {
+                alert("กรุณาติดตั้ง Google Apps Script ก่อน และนำ URL มาใส่ในตัวแปร SCRIPT_URL");
+                return;
+            }
+
+            document.getElementById('loading').classList.remove('hidden');
+            document.getElementById('studentList').innerHTML = '';
+
+            try {
+                const response = await fetch(`${SCRIPT_URL}?action=getStudents`);
+                const students = await response.json();
+                renderStudents(students);
+            } catch (error) {
+                console.error(error);
+                showToast("ไม่สามารถโหลดข้อมูลได้ ตรวจสอบการตั้งค่า CORS หรือ URL", true);
+            } finally {
+                document.getElementById('loading').classList.add('hidden');
+            }
+        }
+
+        function renderStudents(students) {
+            const container = document.getElementById('studentList');
+            if (students.length === 0) {
+                container.innerHTML = `<div class="col-span-full text-center py-10">ไม่พบข้อมูลนักเรียน</div>`;
+                return;
+            }
+
+            students.forEach((student, index) => {
+                const card = document.createElement('div');
+                card.className = "bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:border-blue-200 transition-all flex flex-col justify-between";
+                card.innerHTML = `
+                    <div>
+                        <div class="flex items-start justify-between mb-2">
+                            <h3 class="text-xl font-semibold text-gray-800 truncate" title="${student.name}">${student.name}</h3>
+                        </div>
+                        <a href="${student.link}" target="_blank" class="inline-flex items-center gap-2 text-blue-500 hover:text-blue-700 font-medium text-sm mb-4 bg-blue-50 px-3 py-1 rounded-full transition-colors">
+                            🔗 เปิดเล่นเกม 
+                        </a>
+                        <div class="mb-4">
+                            <label class="block text-xs text-gray-400 mb-1 uppercase tracking-wider font-semibold">ความคิดเห็นเพิ่มเติม</label>
+                            <textarea id="comment-${index}" rows="2" placeholder="จุดเด่นหรือสิ่งที่ควรปรับปรุง..." class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none resize-none bg-gray-50"></textarea>
+                        </div>
+                    </div>
+                    <div class="border-t pt-4">
+                        <p class="text-xs text-gray-400 mb-2 uppercase tracking-wider font-semibold">ให้คะแนนเกม</p>
+                        <div class="flex flex-col gap-3">
+                            <div class="star-rating">
+                                ${Array.from({length: 10}, (_, i) => 10 - i).map(num => `
+                                    <input type="radio" id="star-${index}-${num}" name="rating-${index}" value="${num}">
+                                    <label for="star-${index}-${num}" class="px-0.5">★</label>
+                                `).join('')}
+                            </div>
+                            <button onclick="submitScore(${index}, '${student.name}')" class="w-full bg-green-500 hover:bg-green-600 text-white font-medium py-2 rounded-lg text-sm transition-all active:scale-95">
+                                บันทึกคะแนน
+                            </button>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        async function submitScore(index, studentName) {
+            const judge = document.getElementById('judgeName').value;
+            const rating = document.querySelector(`input[name="rating-${index}"]:checked`)?.value;
+            const comment = document.getElementById(`comment-${index}`).value;
+
+            if (!judge) {
+                showToast("กรุณากรอกชื่อผู้ตรวจก่อน", true);
+                return;
+            }
+            if (!rating) {
+                showToast("กรุณาเลือกคะแนน (0-10 ดาว)", true);
+                return;
+            }
+
+            const loading = document.getElementById('loading');
+            loading.classList.remove('hidden');
+
+            try {
+                const payload = {
+                    action: 'submitScore',
+                    studentName: studentName,
+                    score: rating,
+                    judge: judge,
+                    comment: comment // เพิ่มข้อมูลความคิดเห็นใน payload
+                };
+
+                const response = await fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    body: JSON.stringify(payload)
+                });
+
+                const result = await response.json();
+                if (result.status === 'success') {
+                    showToast(`บันทึกคะแนนของ ${studentName} เรียบร้อยแล้ว`);
+                    // ล้างค่าความคิดเห็นหลังบันทึกสำเร็จ
+                    document.getElementById(`comment-${index}`).value = '';
+                } else {
+                    throw new Error();
+                }
+            } catch (error) {
+                showToast("เกิดข้อผิดพลาดในการบันทึกข้อมูล", true);
+            } finally {
+                loading.classList.add('hidden');
+            }
+        }
+    </script>
+</body>
+</html>
