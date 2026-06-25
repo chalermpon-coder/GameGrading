@@ -1,0 +1,1207 @@
+<!DOCTYPE html>
+<html lang="th" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>พิมพ์ดีดตาลสุมพัฒนา - ระบบฝึกพิมพ์อัจฉริยะและบันทึกผลการเรียน</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400&family=Chakra+Petch:wght@400;600;700&display=swap" rel="stylesheet">
+    <!-- html2canvas for saving popup as image -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Sarabun', 'sans-serif'],
+                        mono: ['Chakra Petch', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .custom-scroll::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scroll::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scroll::-webkit-scrollbar-thumb {
+            background-color: rgba(156, 163, 175, 0.5);
+            border-radius: 3px;
+        }
+        .text-cursor {
+            border-left: 2px solid #6366f1;
+            animation: blink 1s step-end infinite;
+        }
+        @keyframes blink {
+            from, to { border-color: transparent }
+            50% { border-color: #6366f1; }
+        }
+    </style>
+</head>
+<body class="bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 font-sans transition-colors duration-300 h-full flex flex-col overflow-hidden">
+
+    <!-- === ส่วนปรับแต่งด่วนสำหรับคุณครู (CONFIG ZONE) === -->
+    <script>
+        // วาง URL ของ Google Apps Web App (เว็บแอปสคริปต์ที่ได้จากการ Deploy) ของคุณครูตรงนี้
+        const DEFAULT_GOOGLE_SHEET_URL = "https://script.google.com/macros/s/AKfycbyxKddMsWWFgQK8m_QHKVhrsIGcOg_FbeY63vulXf02ciFPJEYfH_v7KkVJhruZ_-HIkQ/exec"; 
+    </script>
+
+    <!-- หน้าต่างต้อนรับลงทะเบียนเริ่มต้น (Modal Register) -->
+    <div id="registerModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 max-w-md w-full p-6 transform transition-all scale-100">
+            <div class="text-center mb-6">
+                <span class="text-5xl mb-2 inline-block">🏫</span>
+                <h1 class="text-2xl font-bold font-mono text-indigo-600 dark:text-indigo-400 mt-2">พิมพ์ดีดตาลสุมพัฒนา</h1>
+                <p class="text-slate-500 dark:text-slate-400 text-sm mt-1">กรอกข้อมูลผู้ใช้งานเริ่มต้นก่อนเริ่มทดสอบพิมพ์ดีด</p>
+            </div>
+            
+            <form id="registerForm" onsubmit="handleRegister(event)" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">ชื่อ - นามสกุล *</label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
+                            <i class="fa-regular fa-user"></i>
+                        </span>
+                        <input type="text" id="regName" required placeholder="เด็กดี เรียนเก่ง" 
+                            class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-700/50 focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-all">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">ระดับชั้นเรียน *</label>
+                        <select id="regClass" required 
+                            class="w-full px-3 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-700/50 focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-all">
+                            <optgroup label="มัธยมศึกษาตอนต้น">
+                                <option value="ม.1/1">ม.1/1</option>
+                                <option value="ม.1/2">ม.1/2</option>
+                                <option value="ม.1/3">ม.1/3</option>
+                                <option value="ม.1/4">ม.1/4</option>
+                                <option value="ม.2/1">ม.2/1</option>
+                                <option value="ม.2/2">ม.2/2</option>
+                                <option value="ม.2/3">ม.2/3</option>
+                                <option value="ม.2/4">ม.2/4</option>
+                                <option value="ม.3/1">ม.3/1</option>
+                                <option value="ม.3/2">ม.3/2</option>
+                                <option value="ม.3/3">ม.3/3</option>
+                                <option value="ม.3/4">ม.3/4</option>
+                            </optgroup>
+                            <optgroup label="มัธยมศึกษาตอนปลาย">
+                                <option value="ม.4/1">ม.4/1</option>
+                                <option value="ม.4/2">ม.4/2</option>
+                                <option value="ม.4/3">ม.4/3</option>
+                                <option value="ม.4/4">ม.4/4</option>
+                                <option value="ม.5/1">ม.5/1</option>
+                                <option value="ม.5/2">ม.5/2</option>
+                                <option value="ม.5/3">ม.5/3</option>
+                                <option value="ม.5/4">ม.5/4</option>
+                                <option value="ม.6/1">ม.6/1</option>
+                                <option value="ม.6/2">ม.6/2</option>
+                                <option value="ม.6/3">ม.6/3</option>
+                                <option value="ม.6/4">ม.6/4</option>
+                            </optgroup>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">เลขที่ (No.) *</label>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
+                                <i class="fa-solid fa-list-ol"></i>
+                            </span>
+                            <input type="number" id="regNo" min="1" max="50" required placeholder="1" 
+                                class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-700/50 focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-all">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="pt-2">
+                    <button type="submit" 
+                        class="w-full bg-gradient-to-r from-indigo-500 to-violet-600 text-white font-semibold py-3 px-4 rounded-xl shadow-lg shadow-indigo-500/20 hover:opacity-90 active:scale-95 transition-all flex items-center justify-center gap-2">
+                        <span>เข้าสู่ระบบฝึกพิมพ์ดีด</span>
+                        <i class="fa-solid fa-arrow-right"></i>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ส่วนหัวโปรแกรม (Header Navigation) -->
+    <header class="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-6 py-4 flex flex-shrink-0 items-center justify-between shadow-sm z-30">
+        <div class="flex items-center gap-3">
+            <span class="text-3xl">💻</span>
+            <div>
+                <h1 class="text-xl font-bold font-mono text-indigo-600 dark:text-indigo-400 leading-none">พิมพ์ดีดตาลสุมพัฒนา</h1>
+                <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">ระบบพัฒนาการพิมพ์ไทย เชื่อมโยง Google Sheets</p>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-4">
+            <!-- ส่วนแสดงผู้ใช้งานปัจจุบัน -->
+            <div id="userInfoHeader" class="hidden md:flex items-center gap-2 px-3 py-1.5 bg-slate-100 dark:bg-slate-700/50 rounded-xl text-sm border border-slate-200 dark:border-slate-600/50">
+                <span class="text-indigo-500 dark:text-indigo-400"><i class="fa-solid fa-graduation-cap"></i></span>
+                <span id="headerUserName" class="font-semibold text-slate-700 dark:text-slate-200">-</span>
+                <span id="headerUserClass" class="bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 px-2 py-0.5 rounded text-xs font-bold">-</span>
+                <span id="headerUserNo" class="text-slate-400">เลขที่ -</span>
+                <button onclick="openRegisterModal()" title="แก้ไขประวัตินักเรียน" class="text-slate-400 hover:text-indigo-500 transition-colors ml-1">
+                    <i class="fa-solid fa-user-pen"></i>
+                </button>
+            </div>
+
+            <!-- เมนูกำหนดค่าแอปสำหรับแอดมินหรือคุณครู -->
+            <button onclick="toggleConfigModal()" title="การเชื่อมต่อ Google Sheets" 
+                class="px-3 py-2 bg-slate-100 dark:bg-slate-700/60 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors text-sm flex items-center gap-1.5 border border-slate-200 dark:border-slate-600/40">
+                <i class="fa-solid fa-cloud-arrow-up"></i>
+                <span class="hidden sm:inline">เชื่อมต่อชีต</span>
+            </button>
+
+            <!-- สลับโหมดกลางวัน/กลางคืน -->
+            <button onclick="toggleDarkMode()" 
+                class="p-2.5 bg-slate-100 dark:bg-slate-700/60 text-slate-600 dark:text-slate-300 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 hover:text-indigo-600 dark:hover:text-indigo-400 rounded-xl transition-all border border-slate-200 dark:border-slate-600/40">
+                <i id="themeIcon" class="fa-solid fa-moon"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- พื้นที่แสดงผลการเล่นและการตั้งค่าหลัก (Body Layout) -->
+    <div class="flex-grow flex flex-col lg:flex-row overflow-hidden">
+        
+        <!-- แถบด้านซ้าย: แถบคอนโซลตารางคะแนนสูงสุด (High Score Leaderboard) -->
+        <aside class="w-full lg:w-80 bg-white dark:bg-slate-800 border-b lg:border-b-0 lg:border-r border-slate-200 dark:border-slate-700 flex flex-col flex-shrink-0">
+            <div class="p-4 border-b border-slate-200 dark:border-slate-700">
+                <h2 class="text-base font-bold font-mono flex items-center gap-2 text-amber-500">
+                    <i class="fa-solid fa-trophy"></i>
+                    <span>ทำเนียบนักเรียนพิมพ์ดีดสูงสุด</span>
+                </h2>
+                <p class="text-xs text-slate-400 dark:text-slate-500 mt-1">ตารางคะแนนสูงสุด 10 อันดับแรก เรียงจาก WPM</p>
+            </div>
+            
+            <!-- รายชื่อคะแนนสูงสุด -->
+            <div id="leaderboardContainer" class="flex-grow overflow-y-auto p-4 space-y-3 custom-scroll">
+                <div class="text-center py-8 text-slate-400 dark:text-slate-500">
+                    <i class="fa-solid fa-medal text-3xl opacity-40 mb-2 block"></i>
+                    <span class="text-xs">ไม่มีบันทึกข้อมูลคะแนนในปัจจุบัน</span>
+                </div>
+            </div>
+
+            <!-- ข้อมูลสถานะการส่งชีต -->
+            <div class="p-4 bg-slate-50 dark:bg-slate-700/20 border-t border-slate-200 dark:border-slate-700 text-xs text-slate-500 dark:text-slate-400">
+                <div class="flex justify-between items-center">
+                    <span>การซิงค์ชีตอัตโนมัติ:</span>
+                    <span id="syncStatusBadge" class="text-rose-500 dark:text-rose-400 font-bold flex items-center gap-1">
+                        <span class="w-2 h-2 rounded-full bg-rose-500 animate-ping"></span>ปิดทำงานอยู่
+                    </span>
+                </div>
+            </div>
+        </aside>
+
+        <!-- แถบด้านขวา: สนามสำหรับจำลองพิมพ์ข้อความ + มินิเกม Canvas ไดโนเสาร์ -->
+        <main class="flex-grow flex flex-col overflow-hidden bg-slate-50 dark:bg-slate-900/60 p-4 lg:p-6 justify-between">
+            
+            <!-- มินิเกมวิ่งกระโดดไดโนเสาร์ด้วย Canvas -->
+            <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-4 mb-4 relative overflow-hidden flex flex-col items-center">
+                <div class="absolute top-2 left-3 flex items-center gap-2 text-xs font-semibold text-slate-400">
+                    <span class="w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse"></span>
+                    <span>DINO TYPING GAME SCREEN</span>
+                </div>
+                
+                <div id="gameStatusLabel" class="absolute top-2 right-3 text-xs font-mono text-emerald-500 dark:text-emerald-400 font-bold bg-emerald-50 dark:bg-emerald-950/50 px-2 py-0.5 rounded hidden">
+                    DINO JUMPING
+                </div>
+
+                <canvas id="dinoCanvas" class="w-full max-w-2xl h-24 sm:h-28 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-200/50 dark:border-slate-700/50 mt-4"></canvas>
+            </div>
+
+            <!-- โซนจำลองการทำงานพิมพ์ดีด -->
+            <div class="flex-grow bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-4 sm:p-6 flex flex-col justify-between overflow-hidden relative">
+                
+                <div class="flex flex-wrap items-center justify-between gap-3 mb-4 flex-shrink-0">
+                    <div class="flex gap-2" id="difficultySelector">
+                        <button onclick="setDifficulty('easy')" id="btn-easy" class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all border border-indigo-600 bg-indigo-600 text-white shadow-md shadow-indigo-500/20">
+                            ระดับง่าย (คำสั้น)
+                        </button>
+                        <button onclick="setDifficulty('medium')" id="btn-medium" class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700">
+                            ระดับปานกลาง (ประโยค)
+                        </button>
+                        <button onclick="setDifficulty('hard')" id="btn-hard" class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700">
+                            ระดับข้อความยาว (วรรค)
+                        </button>
+                    </div>
+
+                    <div class="flex items-center gap-3">
+                        <span class="text-xs font-mono text-slate-400">จำกัดเวลา:</span>
+                        <select id="timeLimitSelector" onchange="setTimeLimit(this.value)"
+                            class="px-2 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-700 text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-indigo-500">
+                            <option value="60">1 นาที</option>
+                            <option value="300">5 นาที</option>
+                            <option value="600">10 นาที</option>
+                            <option value="900">15 นาที</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- ข้อความหลักที่รอรับการพิมพ์ -->
+                <div class="flex-grow flex items-center justify-center py-4 relative overflow-y-auto custom-scroll max-h-[140px] sm:max-h-none">
+                    <div id="typingTextWrapper" class="text-xl sm:text-2xl leading-relaxed font-normal text-left max-w-3xl tracking-wide select-none">
+                        <!-- ข้อความจะถูกเจนขึ้นตรงนี้ด้วย javascript -->
+                    </div>
+                </div>
+
+                <!-- รายงานสถิติ WPM และ Accuracy -->
+                <div class="grid grid-cols-4 gap-2 sm:gap-4 border-t border-slate-100 dark:border-slate-700/60 pt-4 mt-4 flex-shrink-0">
+                    <div class="bg-indigo-50/50 dark:bg-indigo-950/20 p-2 sm:p-3 rounded-xl border border-indigo-100/30 text-center">
+                        <span class="block text-[10px] sm:text-xs text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider">WPM (เฉลี่ย)</span>
+                        <span id="statWpm" class="text-xl sm:text-2xl font-black font-mono text-indigo-600 dark:text-indigo-400">0</span>
+                    </div>
+                    <div class="bg-emerald-50/50 dark:bg-emerald-950/20 p-2 sm:p-3 rounded-xl border border-emerald-100/30 text-center">
+                        <span class="block text-[10px] sm:text-xs text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider">ความแม่นยำ</span>
+                        <span id="statAccuracy" class="text-xl sm:text-2xl font-black font-mono text-emerald-500 dark:text-emerald-400">100%</span>
+                    </div>
+                    <div class="bg-rose-50/50 dark:bg-rose-950/20 p-2 sm:p-3 rounded-xl border border-rose-100/30 text-center">
+                        <span class="block text-[10px] sm:text-xs text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider">พิมพ์ผิด</span>
+                        <span id="statErrors" class="text-xl sm:text-2xl font-black font-mono text-rose-500">0</span>
+                    </div>
+                    <div class="bg-amber-50/50 dark:bg-amber-950/20 p-2 sm:p-3 rounded-xl border border-amber-100/30 text-center">
+                        <span class="block text-[10px] sm:text-xs text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider">เวลาคงเหลือ</span>
+                        <span id="statTimeLeft" class="text-xl sm:text-2xl font-black font-mono text-amber-500 font-semibold">01:00</span>
+                    </div>
+                </div>
+
+                <!-- ช่องพิมพ์ของนักเรียน -->
+                <div class="mt-4 flex-shrink-0 relative">
+                    <input type="text" id="typingInput" oninput="handleTyping(this.value)" autocomplete="off" placeholder="คลิกที่นี่และเริ่มพิมพ์ข้อความด้านบนเพื่อจับเวลา..." 
+                        class="w-full px-4 py-3 sm:py-4 rounded-xl border-2 border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 focus:bg-white dark:focus:bg-slate-950 focus:border-indigo-500 dark:focus:border-indigo-400 focus:outline-none transition-all pr-12 text-base sm:text-lg">
+                    <button onclick="resetTutor()" title="เริ่มพิมพ์ใหม่" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-rose-500 transition-colors p-1.5 rounded-lg">
+                        <i class="fa-solid fa-arrow-rotate-right text-lg sm:text-xl"></i>
+                    </button>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- โลโก้เครดิตโรงเรียน -->
+    <footer class="bg-white dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 py-2.5 text-center text-[10px] sm:text-xs text-slate-400 dark:text-slate-500 flex-shrink-0 flex items-center justify-center gap-1.5">
+        <span>© 2026 โรงเรียนตาลสุมพัฒนา จังหวัดอุบลราชธานี. สงวนลิขสิทธิ์</span>
+    </footer>
+
+    <!-- หน้าต่างป๊อปอัปตั้งค่าแอดมินในการลิงก์ชีต (Config Modal) -->
+    <div id="configModal" class="fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 max-w-lg w-full p-6 relative">
+            <button onclick="toggleConfigModal()" class="absolute right-4 top-4 text-slate-400 hover:text-rose-500 transition-colors">
+                <i class="fa-solid fa-xmark text-xl"></i>
+            </button>
+            <div class="mb-4">
+                <span class="text-3xl">⚙️</span>
+                <h3 class="text-xl font-bold font-mono mt-1 text-slate-800 dark:text-slate-100">การตั้งค่าเชื่อมโยง Google Sheets</h3>
+                <p class="text-xs text-slate-400 dark:text-slate-500">กรุณาใส่ Web App URL ของคุณครูจาก Google Apps Script เพื่อเปิดระบบจัดส่งคะแนนอัตโนมัติ</p>
+            </div>
+
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Google Sheets Web App URL *</label>
+                    <input type="url" id="sheetUrlInput" placeholder="https://script.google.com/macros/s/.../exec"
+                        class="w-full px-3 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-700/50 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm">
+                </div>
+
+                <div class="p-3 bg-indigo-50 dark:bg-indigo-950/40 rounded-xl border border-indigo-100 dark:border-indigo-900/50 text-xs text-indigo-700 dark:text-indigo-300 space-y-1">
+                    <p class="font-bold flex items-center gap-1"><i class="fa-solid fa-circle-info"></i> คำชี้แจงสำหรับคุณครูผู้คุมสอบ</p>
+                    <p>ระบบจะส่งข้อมูลพารามิเตอร์ 7 ชนิดผ่านระบบ GET ไปยัง Apps Script ของคุณ ได้แก่: <strong>user, class, no, wpm, accuracy, time, mode</strong> เพื่อบันทึกข้อมูลคะแนนของนักเรียนลงสเปรดชีตทันที</p>
+                </div>
+            </div>
+
+            <div class="mt-6 flex justify-end gap-3">
+                <button onclick="toggleConfigModal()" class="px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700 text-sm font-semibold transition-all">ยกเลิก</button>
+                <button onclick="saveConfig()" class="px-5 py-2 bg-gradient-to-r from-indigo-500 to-violet-600 text-white rounded-xl hover:opacity-90 transition-all text-sm font-semibold shadow-md shadow-indigo-500/10">บันทึกเชื่อมต่อ</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- หน้าต่างป๊อปอัปผลลัพธ์คะแนนเมื่อพิมพ์เสร็จ (Result Modal) -->
+    <div id="resultModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-40 flex items-center justify-center p-4 hidden">
+        <div class="bg-white dark:bg-slate-800 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-700 max-w-md w-full p-6 text-center relative overflow-hidden">
+            <!-- เส้นแอนิเมชันความคืบหน้าด้านบน -->
+            <div class="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-emerald-400 via-indigo-500 to-violet-500"></div>
+            
+            <!-- Target container for Image Capture (html2canvas) -->
+            <div id="capture-area" class="bg-white dark:bg-slate-800 p-4 rounded-2xl">
+                <span class="text-6xl mb-2 inline-block">🎉</span>
+                <h2 class="text-2xl font-black text-slate-800 dark:text-white font-mono mt-2">พิมพ์ทดสอบเสร็จสมบูรณ์</h2>
+                <p class="text-xs text-slate-400 dark:text-slate-500 mt-1">ข้อมูลคะแนนและการประเมินสำหรับพิมพ์ดีดตาลสุมพัฒนา</p>
+
+                <!-- แผนผังบัตรประจำตัวผู้เข้าทดสอบและคะแนนประเมิน -->
+                <div class="mt-5 p-4 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-700/60 text-left space-y-3 relative">
+                    <div class="flex justify-between items-center border-b border-slate-200 dark:border-slate-800 pb-2">
+                        <span class="text-xs text-slate-400 font-bold uppercase">ใบรายงานผลสอบ</span>
+                        <span class="text-[10px] bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-400 px-2 py-0.5 rounded font-bold uppercase font-mono">Verified Score</span>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-2 text-xs text-slate-700 dark:text-slate-300">
+                        <div>
+                            <span class="text-slate-400 block text-[10px] uppercase">ชื่อผู้รับการทดสอบ:</span>
+                            <span id="resultStudentName" class="font-bold text-sm">ไม่ระบุชื่อ</span>
+                        </div>
+                        <div>
+                            <span class="text-slate-400 block text-[10px] uppercase">ระดับชั้น / เลขที่:</span>
+                            <span id="resultStudentMeta" class="font-bold text-sm">ม.- / เลขที่ -</span>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-3 gap-2 pt-2 border-t border-slate-200 dark:border-slate-800 text-center">
+                        <div>
+                            <span class="text-slate-400 block text-[9px] uppercase">WPM (คำต่อนาที)</span>
+                            <span id="resultWpm" class="text-xl font-bold font-mono text-indigo-500">0</span>
+                        </div>
+                        <div>
+                            <span class="text-slate-400 block text-[9px] uppercase">ความแม่นยำ</span>
+                            <span id="resultAccuracy" class="text-xl font-bold font-mono text-emerald-500">0%</span>
+                        </div>
+                        <div>
+                            <span class="text-slate-400 block text-[9px] uppercase">เกรดประเมิน</span>
+                            <span id="resultGrade" class="text-xl font-bold font-mono text-amber-500">F</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- รายงานสถานะส่ง Google Sheet -->
+            <div id="sheetStatusBox" class="mt-4 p-3 rounded-xl text-xs flex items-center justify-center gap-2 border bg-slate-50 dark:bg-slate-900/40 text-slate-500 border-slate-200 dark:border-slate-700/60">
+                <i class="fa-solid fa-cloud-arrow-up text-lg animate-pulse"></i>
+                <span id="sheetStatusText">กำลังเตรียมพร้อมบันทึกคะแนนเข้า Google Sheet...</span>
+            </div>
+
+            <div class="mt-6 flex flex-col gap-2">
+                <!-- Save Image button -->
+                <button onclick="saveResultAsImage()" class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl transition-colors shadow-sm flex justify-center items-center gap-2 text-sm">
+                    <i class="fa-solid fa-file-image"></i> บันทึกผลลัพธ์เป็นรูปภาพ
+                </button>
+                
+                <div class="grid grid-cols-2 gap-3">
+                    <button onclick="closeResultModal()" 
+                        class="w-full px-4 py-2.5 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 text-slate-700 dark:text-slate-200 font-semibold rounded-xl text-sm transition-all flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-rotate-left"></i>
+                        <span>เริ่มใหม่</span>
+                    </button>
+                    <button onclick="closeResultModal()" 
+                        class="w-full px-4 py-2.5 bg-gradient-to-r from-indigo-500 to-violet-600 text-white font-semibold rounded-xl text-sm hover:opacity-90 transition-all flex items-center justify-center gap-2 shadow-lg shadow-indigo-500/15">
+                        <i class="fa-solid fa-circle-check"></i>
+                        <span>ตกลง</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- ==================== JAVASCRIPT GAME LOGIC ZONE ==================== -->
+    <script>
+        // ข้อมูลพารากราฟแบบฝึกหัดพิมพ์ภาษาไทยตาลสุมพัฒนา
+        const DICTIONARY = {
+            easy: [
+                "กล้วย มะม่วง ส้มโอ ทุเรียน มังคุด มะละกอ แตงโม มะพร้าว ขนุน ลำไย สตรอว์เบอร์รี องุ่น ลิ้นจี่ ฝรั่ง ละมุด แก้วมังกร ทับทิม เชอร์รี ลูกพลับ ลอนดอน สารคาม ปราสาท นครปฐม หนองคาย ศรีสะเกษ สุรินทร์ สมุทรปราการ ระยอง ชัยภูมิ",
+                "วิทยุ พัดลม ตู้เย็น โทรทัศน์ โทรศัพท์ คอมพิวเตอร์ นาฬิกา กล้องถ่ายรูป เครื่องปรับอากาศ ไมโครเวฟ เครื่องซักผ้า เตารีด หม้อหุงข้าว เตาอบ โคมไฟ เครื่องดูดฝุ่น ไดร์เป่าผม ลำโพง ปลั๊กไฟ หูฟัง โคมไฟ ตั้งโต๊ะ",
+                "โรงเรียน นักเรียน คุณครู กระดานดำ สมุด ดินสอ ยางลบ ไม้บรรทัด หนังสือ โต๊ะเรียน เก้าอี้ ไม้กวาด ตู้เอกสาร คอมพิวเตอร์ อินเทอร์เน็ต พลศึกษา ภาษาไทย คณิตศาสตร์ วิทยาศาสตร์ ประวัติศาสตร์ สังคมศึกษา สุขศึกษา"
+            ],
+            medium: [
+                "เยาวชนไทยในยุคปัจจุบันต้องรู้จักหน้าที่และระเบียบวินัย พร้อมที่จะเรียนรู้และพัฒนาตนเองอย่างสม่ำเสมอเพื่อความเจริญก้าวหน้าของประเทศชาติในวันข้างหน้า",
+                "การรับประทานอาหารให้ครบทั้งห้าหมู่ในสัดส่วนที่เหมาะสมและออกกำลังกายอย่างต่อเนื่องสม่ำเสมอ จะช่วยสร้างภูมิต้านทานโรคและทำให้ร่างกายมีสุขภาพที่ดีแข็งแรงแจ่มใส",
+                "การอนุรักษ์ป่าไม้และสิ่งแวดล้อมทางธรรมชาติถือเป็นความร่วมมือร่วมใจของพวกเราทุกคนที่ต้องช่วยกันสืบทอดไปสู่ลูกหลานเพื่อลดผลกระทบของการเปลี่ยนแปลงสภาพภูมิอากาศโลก"
+            ],
+            hard: [
+                "โรงเรียนตาลสุมพัฒนา ตั้งอยู่ท่ามกลางบรรยากาศธรรมชาติที่เอื้อต่อการเรียนรู้ของคณะครูและนักเรียน โดยทางโรงเรียนมุ่งเน้นส่งเสริมความเป็นเลิศทางวิชาการ ควบคู่ไปกับการฝึกฝนคุณธรรมจริยธรรม และทักษะวิชาชีพที่จำเป็นสำหรับเยาวชนในศตวรรษที่ยี่สิบเอ็ด เพื่อให้เติบโตเป็นผู้ใหญ่ที่สมบูรณ์แบบพร้อมบริการและเกื้อหนุนชุมชนสังคมต่อไปในอนาคตอันใกล้",
+                "เทคโนโลยีดิจิทัลและปัญญาประดิษฐ์ในปัจจุบันก้าวเข้ามามีบทบาทขับเคลื่อนอุตสาหกรรมในวงกว้างอย่างรวดเร็ว ทำให้นักเรียนและบุคลากรทางการศึกษาจำเป็นอย่างยิ่งที่จะต้องได้รับการฝึกพิมพ์สัมผัสที่รวดเร็วและแม่นยำ เพื่อรองรับความเปลี่ยนแปลงของตลาดแรงงานและการใช้นวัตกรรมทางคอมพิวเตอร์อย่างเกิดประโยชน์สูงสุด ปราศจากความผิดพลาดในการประมวลผลระบบข้อมูล"
+            ]
+        };
+
+        // ข้อมูลผู้ใช้
+        let userProfile = {
+            name: "",
+            studentClass: "ม.1/1",
+            no: ""
+        };
+
+        // การตั้งค่าทั่วไปและตัวแปรควบคุมเกมพิมพ์ดีด
+        let targetText = "";
+        let currentInput = "";
+        let timer = null;
+        let timeRemaining = 60;
+        let isTypingStarted = false;
+        let totalTypedChars = 0;
+        let correctTypedChars = 0;
+        let errorCount = 0;
+        let activeDifficulty = 'easy';
+        let limitDuration = 60; 
+        let leaderboard = [];
+        let isTypoState = false;
+
+        // โดเมนออบเจ็กต์ของ DOM
+        const typingTextWrapper = document.getElementById('typingTextWrapper');
+        const typingInput = document.getElementById('typingInput');
+        const statWpm = document.getElementById('statWpm');
+        const statAccuracy = document.getElementById('statAccuracy');
+        const statErrors = document.getElementById('statErrors');
+        const statTimeLeft = document.getElementById('statTimeLeft');
+        const syncStatusBadge = document.getElementById('syncStatusBadge');
+
+        // ตรวจเช็กการตั้งค่า Google Sheet เชื่อมต่อ
+        let currentSheetUrl = localStorage.getItem('school_sheet_url') || DEFAULT_GOOGLE_SHEET_URL;
+
+        // == ตัวช่วยโหลดเมื่อเว็บพร้อมรัน ==
+        window.addEventListener('load', () => {
+            initDinoGame();
+            loadLeaderboard();
+            updateSyncBadge();
+            
+            // ดึงข้อมูลผู้ใช้เก่าจากหน่วยความจำ
+            const savedProfile = localStorage.getItem('student_profile_ts');
+            if (savedProfile) {
+                userProfile = JSON.parse(savedProfile);
+                applyProfileToUI();
+            } else {
+                openRegisterModal();
+            }
+
+            resetTutor();
+        });
+
+        // เปิดแบบฟอร์มลงทะเบียนตัวตนนักเรียน
+        function openRegisterModal() {
+            document.getElementById('registerModal').style.display = 'flex';
+            if (userProfile.name) {
+                document.getElementById('regName').value = userProfile.name;
+                document.getElementById('regClass').value = userProfile.studentClass;
+                document.getElementById('regNo').value = userProfile.no;
+            }
+        }
+
+        // ประมวลผลลงทะเบียน
+        function handleRegister(event) {
+            event.preventDefault();
+            userProfile.name = document.getElementById('regName').value.trim();
+            userProfile.studentClass = document.getElementById('regClass').value;
+            userProfile.no = document.getElementById('regNo').value.trim();
+
+            localStorage.setItem('student_profile_ts', JSON.stringify(userProfile));
+            applyProfileToUI();
+            document.getElementById('registerModal').style.display = 'none';
+            resetTutor();
+        }
+
+        // นำข้อมูลนักเรียนแสดงบน UI Header
+        function applyProfileToUI() {
+            document.getElementById('userInfoHeader').classList.remove('hidden');
+            document.getElementById('headerUserName').innerText = userProfile.name;
+            document.getElementById('headerUserClass').innerText = userProfile.studentClass;
+            document.getElementById('headerUserNo').innerText = "เลขที่ " + userProfile.no;
+        }
+
+        // ตั้งค่า Google Sheet Web App และเซฟ
+        function toggleConfigModal() {
+            const modal = document.getElementById('configModal');
+            modal.classList.toggle('hidden');
+            if (!modal.classList.contains('hidden')) {
+                document.getElementById('sheetUrlInput').value = currentSheetUrl;
+            }
+        }
+
+        function saveConfig() {
+            const inputUrl = document.getElementById('sheetUrlInput').value.trim();
+            if (inputUrl) {
+                currentSheetUrl = inputUrl;
+                localStorage.setItem('school_sheet_url', inputUrl);
+            } else {
+                currentSheetUrl = DEFAULT_GOOGLE_SHEET_URL;
+                localStorage.removeItem('school_sheet_url');
+            }
+            updateSyncBadge();
+            toggleConfigModal();
+            loadLeaderboard(); // รีเฟรชตารางหลังเปลี่ยน URL
+        }
+
+        function updateSyncBadge() {
+            if (currentSheetUrl && currentSheetUrl !== "") {
+                syncStatusBadge.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>พร้อมซิงค์แบบคลาวด์`;
+                syncStatusBadge.className = "text-emerald-500 dark:text-emerald-400 font-bold flex items-center gap-1";
+            } else {
+                syncStatusBadge.innerHTML = `<span class="w-2 h-2 rounded-full bg-rose-500 animate-ping"></span>ปิดทำงานอยู่`;
+                syncStatusBadge.className = "text-rose-500 dark:text-rose-400 font-bold flex items-center gap-1";
+            }
+        }
+
+        // ตั้งระดับความยาก
+        function setDifficulty(level) {
+            activeDifficulty = level;
+            ['easy', 'medium', 'hard'].forEach(diff => {
+                const btn = document.getElementById(`btn-${diff}`);
+                if (diff === level) {
+                    btn.className = "px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all border border-indigo-600 bg-indigo-600 text-white shadow-md shadow-indigo-500/20";
+                } else {
+                    btn.className = "px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700";
+                }
+            });
+            resetTutor();
+        }
+
+        // ตั้งเวลาจำกัดการพิมพ์
+        function setTimeLimit(value) {
+            limitDuration = parseInt(value);
+            resetTutor();
+        }
+
+        // ดึงอันดับคะแนนสูงสุด (ออนไลน์จาก Sheet + ออฟไลน์ดั้งเดิมเป็นตัวสำรอง)
+        function loadLeaderboard() {
+            // ดึงประวัติด่วนจากหน่วยความจำเครื่องมาแสดงผลทันทีเป็นอันดับแรกเพื่อความเร็ว
+            const localScores = localStorage.getItem('ts_leaderboard');
+            if (localScores) {
+                leaderboard = JSON.parse(localScores);
+                renderLeaderboard();
+            }
+
+            // หากมี Web App URL ของคุณครู ให้พยายามดึงข้อมูลสถิติรวมออนไลน์จากสเปรดชีต
+            if (currentSheetUrl && currentSheetUrl !== "") {
+                const fetchUrl = `${currentSheetUrl}?action=getLeaderboard`;
+                fetch(fetchUrl)
+                .then(res => {
+                    if (!res.ok) throw new Error("Leaderboard fetch failed");
+                    return res.json();
+                })
+                .then(data => {
+                    // หากได้รับข้อมูลในรูปแบบ Array ที่ถูกต้องจาก Sheet สำเร็จ
+                    if (Array.isArray(data)) {
+                        leaderboard = data;
+                        localStorage.setItem('ts_leaderboard', JSON.stringify(leaderboard));
+                        renderLeaderboard();
+                    }
+                })
+                .catch(err => {
+                    console.warn("ไม่สามารถดึงข้อมูลทำเนียบสูงสุดออนไลน์ได้ จะใช้งานระบบเครื่องชั่วคราว:", err);
+                });
+            }
+        }
+
+        // แสดงผลตารางทำเนียบคะแนนสูงสุด (10 อันดับ)
+        function renderLeaderboard() {
+            const container = document.getElementById('leaderboardContainer');
+            if (leaderboard.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-8 text-slate-400 dark:text-slate-500">
+                        <i class="fa-solid fa-medal text-3xl opacity-40 mb-2 block"></i>
+                        <span class="text-xs">ไม่มีบันทึกข้อมูลคะแนนในปัจจุบัน</span>
+                    </div>`;
+                return;
+            }
+
+            container.innerHTML = leaderboard.map((item, index) => {
+                let badge = "";
+                let medalClass = "bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300";
+                
+                if (index === 0) {
+                    badge = "🥇";
+                    medalClass = "bg-amber-100 text-amber-700 border border-amber-300 dark:bg-amber-950/40 dark:text-amber-400";
+                } else if (index === 1) {
+                    badge = "🥈";
+                    medalClass = "bg-slate-200 text-slate-800 border border-slate-300 dark:bg-slate-600/35 dark:text-slate-200";
+                } else if (index === 2) {
+                    badge = "🥉";
+                    medalClass = "bg-orange-100 text-orange-800 border border-orange-300 dark:bg-orange-950/40 dark:text-orange-400";
+                } else {
+                    badge = index + 1;
+                }
+
+                // แปลงคำโหมดให้อ่านง่าย
+                let modeLabel = "ง่าย";
+                if (item.mode === "medium") modeLabel = "ปานกลาง";
+                else if (item.mode === "hard") modeLabel = "ท้าทาย";
+                else if (item.mode === "custom") modeLabel = "อิสระ";
+
+                return `
+                    <div class="flex items-center gap-3 p-3 rounded-xl border border-slate-200/50 dark:border-slate-700/50 bg-slate-50 dark:bg-slate-800/50 hover:scale-[1.01] transition-transform">
+                        <span class="w-7 h-7 rounded-lg flex items-center justify-center font-bold text-xs ${medalClass}">
+                            ${badge}
+                        </span>
+                        <div class="flex-grow min-w-0">
+                            <div class="flex items-center justify-between">
+                                <span class="font-bold text-sm truncate block text-slate-800 dark:text-slate-200">${item.user}</span>
+                                <span class="text-xs bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-400 px-1.5 py-0.2 rounded font-bold">${item.wpm} WPM</span>
+                            </div>
+                            <div class="flex items-center justify-between text-[10px] text-slate-400 dark:text-slate-500 mt-1">
+                                <span>ชั้น ${item.class} (เลขที่ ${item.no})</span>
+                                <span class="bg-slate-200 dark:bg-slate-700 px-1.5 rounded-full text-[9px] scale-90">โหมด ${modeLabel}</span>
+                            </div>
+                        </div>
+                    </div>`;
+            }).join('');
+        }
+
+        // เซฟคะแนนลงเครื่องเป็น Local Backup
+        function saveToLocalLeaderboard(newScore) {
+            leaderboard.push(newScore);
+            leaderboard.sort((a, b) => b.wpm - a.wpm || b.accuracy - a.accuracy);
+            if (leaderboard.length > 10) {
+                leaderboard = leaderboard.slice(0, 10);
+            }
+            localStorage.setItem('ts_leaderboard', JSON.stringify(leaderboard));
+            renderLeaderboard();
+        }
+
+        // เริ่มรีเซ็ตระบบจับพิมพ์ใหม่
+        function resetTutor() {
+            clearInterval(timer);
+            isTypingStarted = false;
+            timeRemaining = limitDuration;
+            errorCount = 0;
+            totalTypedChars = 0;
+            correctTypedChars = 0;
+            currentInput = "";
+            isTypoState = false;
+
+            const levelSentences = DICTIONARY[activeDifficulty];
+            targetText = levelSentences[Math.floor(Math.random() * levelSentences.length)];
+
+            typingInput.value = "";
+            typingInput.disabled = false;
+            
+            updateTextDisplay();
+            updateTimerLabel();
+
+            statWpm.innerText = "0";
+            statAccuracy.innerText = "100%";
+            statErrors.innerText = "0";
+
+            resetDinoGame();
+        }
+
+        // ฟังก์ชันอัปเดตและทำไฮไลต์ข้อความเป้าหมาย
+        function updateTextDisplay() {
+            let html = '';
+            for (let i = 0; i < targetText.length; i++) {
+                const char = targetText[i];
+                if (i < currentInput.length) {
+                    if (currentInput[i] === char) {
+                        html += `<span class="text-emerald-500 bg-emerald-50 dark:bg-emerald-950/20 rounded font-semibold">${char === ' ' ? '&nbsp;' : char}</span>`;
+                    } else {
+                        html += `<span class="text-rose-500 bg-rose-100 dark:bg-rose-950/40 rounded font-bold underline decoration-wavy">${char === ' ' ? '&nbsp;' : char}</span>`;
+                    }
+                } else if (i === currentInput.length) {
+                    html += `<span class="text-cursor bg-indigo-100 dark:bg-indigo-900/60 font-semibold text-indigo-600 dark:text-indigo-300 rounded">${char === ' ' ? '&nbsp;' : char}</span>`;
+                } else {
+                    html += `<span class="text-slate-400 dark:text-slate-500">${char === ' ' ? '&nbsp;' : char}</span>`;
+                }
+            }
+            typingTextWrapper.innerHTML = html;
+        }
+
+        // รับข้อมูลเมื่อเริ่มพิมพ์ข้อความ
+        function handleTyping(value) {
+            if (!isTypingStarted && value.length > 0) {
+                isTypingStarted = true;
+                timer = setInterval(runTimer, 1000);
+            }
+
+            // ตรวจหาจุดผิดพลาดสะดุด (Typo check) เพื่อส่งให้ Dino
+            let currentHasTypo = false;
+            for (let i = 0; i < value.length; i++) {
+                if (value[i] !== targetText[i]) {
+                    currentHasTypo = true;
+                    break;
+                }
+            }
+
+            if (currentHasTypo) {
+                isTypoState = true;
+                dinoState.stumble = true;
+                dinoState.stumbleTimer = 40; // ล็อกสถานะสะดุดให้มึนงง
+            } else {
+                isTypoState = false;
+            }
+
+            // ระบบกระโดดอัตโนมัติเมื่อพิมพ์คำสำเร็จ
+            if (value.length > currentInput.length && !currentHasTypo) {
+                const nextChar = value[value.length - 1];
+                if (nextChar === ' ' || value.length % 5 === 0) {
+                    triggerDinoJump();
+                }
+            }
+
+            totalTypedChars = value.length;
+            
+            let tempErrors = 0;
+            let tempCorrect = 0;
+            for (let i = 0; i < value.length; i++) {
+                if (value[i] !== targetText[i]) {
+                    tempErrors++;
+                } else {
+                    tempCorrect++;
+                }
+            }
+            errorCount = tempErrors;
+            correctTypedChars = tempCorrect;
+
+            currentInput = value;
+            updateTextDisplay();
+            calculateRealTimeStats();
+
+            // หากผู้ใช้งานพิมพ์ครบความยาวประโยคปัจจุบัน
+            if (currentInput.length >= targetText.length) {
+                const levelSentences = DICTIONARY[activeDifficulty];
+                const nextParagraph = levelSentences[Math.floor(Math.random() * levelSentences.length)];
+                
+                targetText += " " + nextParagraph;
+                updateTextDisplay();
+            }
+        }
+
+        // คำนวณความเร็วคำต่อนาที (WPM) แบบเรียลไทม์
+        function calculateRealTimeStats() {
+            const elapsedMinutes = (limitDuration - timeRemaining) / 60 || 0.01;
+            const wpm = Math.max(0, Math.round((correctTypedChars / 5) / elapsedMinutes));
+            const accuracy = totalTypedChars === 0 ? 100 : Math.round((correctTypedChars / totalTypedChars) * 100);
+
+            statWpm.innerText = wpm;
+            statAccuracy.innerText = accuracy + "%";
+            statErrors.innerText = errorCount;
+        }
+
+        // ตัวนับถอยหลังวินาที
+        function runTimer() {
+            timeRemaining--;
+            updateTimerLabel();
+
+            if (timeRemaining <= 0) {
+                finishTypingTest();
+            }
+        }
+
+        function updateTimerLabel() {
+            const min = Math.floor(timeRemaining / 60);
+            const sec = timeRemaining % 60;
+            statTimeLeft.innerText = `${min.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}`;
+        }
+
+        // เสร็จสิ้นกระบวนการทดสอบพิมพ์ดีด
+        function finishTypingTest() {
+            clearInterval(timer);
+            typingInput.disabled = true;
+
+            const finalWpm = parseInt(statWpm.innerText);
+            const finalAccuracy = parseInt(statAccuracy.innerText);
+            
+            let grade = "F";
+            if (finalWpm >= 45 && finalAccuracy >= 95) grade = "A";
+            else if (finalWpm >= 35 && finalAccuracy >= 90) grade = "B";
+            else if (finalWpm >= 25 && finalAccuracy >= 80) grade = "C";
+            else if (finalWpm >= 15 && finalAccuracy >= 70) grade = "D";
+
+            document.getElementById('resultStudentName').innerText = userProfile.name || "ไม่ระบุชื่อ";
+            document.getElementById('resultStudentMeta').innerText = `ชั้น ${userProfile.studentClass} / เลขที่ ${userProfile.no || "-"}`;
+            document.getElementById('resultWpm').innerText = finalWpm;
+            document.getElementById('resultAccuracy').innerText = finalAccuracy + "%";
+            document.getElementById('resultGrade').innerText = grade;
+
+            const newScore = {
+                user: userProfile.name || "ไม่ระบุชื่อ",
+                class: userProfile.studentClass,
+                no: userProfile.no || "-",
+                wpm: finalWpm,
+                accuracy: finalAccuracy,
+                time: limitDuration - timeRemaining,
+                mode: activeDifficulty
+            };
+            saveToLocalLeaderboard(newScore);
+
+            document.getElementById('resultModal').style.display = 'flex';
+
+            uploadScoreToSheet(newScore);
+        }
+
+        // อัปโหลดคะแนนไปยัง Google Sheet ของสถานศึกษา
+        function uploadScoreToSheet(scoreObj) {
+            const statusBox = document.getElementById('sheetStatusBox');
+            const statusText = document.getElementById('sheetStatusText');
+
+            if (!currentSheetUrl || currentSheetUrl === "") {
+                statusBox.className = "mt-4 p-3 rounded-xl text-xs flex items-center justify-center gap-2 border bg-amber-50 dark:bg-amber-950/40 text-amber-600 border-amber-200 dark:border-amber-850/60";
+                statusText.innerHTML = `<i class="fa-solid fa-circle-exclamation"></i> ไม่ได้ระบุ URL สเปรดชีตในสคริปต์หลัก คะแนนจะบันทึกในเครื่องแทน`;
+                return;
+            }
+
+            statusBox.className = "mt-4 p-3 rounded-xl text-xs flex items-center justify-center gap-2 border bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 border-indigo-200 dark:border-indigo-850/60";
+            statusText.innerHTML = `<i class="fa-solid fa-spinner animate-spin"></i> ระบบกำลังอัปโหลดส่งคะแนนเข้า Google Sheets ของคุณครู...`;
+
+            // ดึงข้อมูลพารามิเตอร์ให้สะกดตรงตัวตาม code.gs ที่ดึง parameter.xxx
+            const finalUploadUrl = `${currentSheetUrl}?user=${encodeURIComponent(scoreObj.user)}&class=${encodeURIComponent(scoreObj.class)}&no=${encodeURIComponent(scoreObj.no)}&wpm=${encodeURIComponent(scoreObj.wpm)}&accuracy=${encodeURIComponent(scoreObj.accuracy)}&time=${encodeURIComponent(scoreObj.time)}&mode=${encodeURIComponent(scoreObj.mode)}`;
+
+            // เรียกเชื่อมโยงคลาวด์แบบตรวจจับสองชั้น (มีระบบ Fallback หากเครือข่ายบล็อก CORS)
+            fetch(finalUploadUrl)
+            .then(res => {
+                if (!res.ok) throw new Error("CORS or Server Error");
+                return res.json();
+            })
+            .then(data => {
+                if (data && data.result === "success") {
+                    statusBox.className = "mt-4 p-3 rounded-xl text-xs flex items-center justify-center gap-2 border bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 border-emerald-200 dark:border-emerald-850/60";
+                    statusText.innerHTML = `<i class="fa-solid fa-cloud-check"></i> บันทึกข้อมูลพิมพ์ดีดสำเร็จ บอร์ดจัดอันดับคะแนนอัปเดตเรียบร้อย!`;
+                    
+                    // นำข้อมูลตารางอันดับล่าสุดที่เซิร์ฟเวอร์ส่งคืนมาเรนเดอร์ลงจอทันที
+                    if (data.leaderboard && Array.isArray(data.leaderboard)) {
+                        leaderboard = data.leaderboard;
+                        localStorage.setItem('ts_leaderboard', JSON.stringify(leaderboard));
+                        renderLeaderboard();
+                    } else {
+                        loadLeaderboard();
+                    }
+                } else {
+                    throw new Error(data.error || "Unknown server response");
+                }
+            })
+            .catch(err => {
+                console.warn("สลับเข้าสู่โหมดสำรองเพื่อหลบเลี่ยง CORS redirection:", err);
+                
+                // ใช้โหมด no-cors เพื่อให้มั่นใจว่าเบราว์เซอร์ยังคงสามารถเขียนข้อมูลลง Sheet ได้แม้ไม่ได้รับอนุญาตให้อ่านผลตอบกลับ
+                fetch(finalUploadUrl, {
+                    method: 'GET',
+                    mode: 'no-cors'
+                })
+                .then(() => {
+                    statusBox.className = "mt-4 p-3 rounded-xl text-xs flex items-center justify-center gap-2 border bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 border-emerald-200 dark:border-emerald-850/60";
+                    statusText.innerHTML = `<i class="fa-solid fa-cloud-check"></i> บันทึกสถิติมือเสร็จสมบูรณ์ (โหมดเขียนข้อมูลสำรอง)!`;
+                    
+                    // ปล่อยดีเลย์ 1.5 วินาทีให้เซิร์ฟเวอร์ Google บันทึกเสร็จ แล้วทำการรีดึงบอร์ดคะแนนแยกต่างหาก
+                    setTimeout(loadLeaderboard, 1500);
+                })
+                .catch(fallbackErr => {
+                    statusBox.className = "mt-4 p-3 rounded-xl text-xs flex items-center justify-center gap-2 border bg-rose-50 dark:bg-rose-950/40 text-rose-600 border-rose-200 dark:border-rose-850/60";
+                    statusText.innerHTML = `<i class="fa-solid fa-circle-xmark"></i> การเชื่อมโยงสถิติติดขัด: ${fallbackErr.message}`;
+                });
+            });
+        }
+
+        // เซฟผลลัพธ์เป็นภาพโดย html2canvas
+        function saveResultAsImage() {
+            const captureArea = document.getElementById("capture-area");
+            const previousBg = captureArea.style.backgroundColor;
+            
+            const isDark = document.documentElement.classList.contains('dark');
+            const options = {
+                scale: 2, 
+                backgroundColor: isDark ? "#1e293b" : "#ffffff", 
+                logging: false,
+                useCORS: true
+            };
+
+            if (isDark) {
+                captureArea.classList.add("text-white");
+                captureArea.classList.remove("text-slate-800");
+            }
+
+            html2canvas(captureArea, options).then(canvas => {
+                if (isDark) {
+                    captureArea.classList.remove("text-white");
+                    captureArea.classList.add("text-slate-800");
+                }
+
+                const image = canvas.toDataURL("image/png");
+                const link = document.createElement("a");
+                const sanitizedUser = userProfile.name.replace(/[^a-zA-Z0-9ก-๙]/g, "_");
+                
+                link.download = `ผลพิมพ์ดีด_${sanitizedUser}_${Date.now()}.png`;
+                link.href = image;
+                link.click();
+            }).catch(err => {
+                console.error("Error creating image canvas:", err);
+            });
+        }
+
+        // ปิดป๊อปอัปรายงานผลประเมิน
+        function closeResultModal() {
+            document.getElementById('resultModal').style.display = 'none';
+            resetTutor();
+        }
+
+        // เปลี่ยนระบบสลับโหมดสว่าง / มืด
+        function toggleDarkMode() {
+            document.documentElement.classList.toggle('dark');
+            const isDark = document.documentElement.classList.contains('dark');
+            localStorage.setItem('dark_theme_status', isDark ? 'on' : 'off');
+            
+            const icon = document.getElementById('themeIcon');
+            if (isDark) {
+                icon.className = "fa-solid fa-sun text-amber-400";
+            } else {
+                icon.className = "fa-solid fa-moon text-indigo-500";
+            }
+        }
+
+        if (localStorage.getItem('dark_theme_status') === 'on') {
+            document.documentElement.classList.add('dark');
+            document.getElementById('themeIcon').className = "fa-solid fa-sun text-amber-400";
+        }
+
+
+        // ==========================================
+        // 🦖 ระบบมินิเกม DINO RUN GAME ด้วย CANVAS 2D
+        // ==========================================
+        const canvas = document.getElementById('dinoCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        let animationFrameId = null;
+        let gameSpeed = 3.5;
+        let obstacles = [];
+        let score = 0;
+        
+        let dinoState = {
+            x: 50,
+            y: 0,
+            width: 24,
+            height: 28,
+            gravity: 0.6,
+            velocity: 0,
+            jumpPower: -9.5,
+            isJumping: false,
+            groundY: 0,
+            stumble: false,       
+            stumbleTimer: 0,       
+            animationFrame: 0      
+        };
+
+        function resizeCanvas() {
+            const rect = canvas.getBoundingClientRect();
+            canvas.width = rect.width;
+            canvas.height = rect.height;
+            dinoState.groundY = canvas.height - 18;
+            if (dinoState.y === 0 || dinoState.y > dinoState.groundY - dinoState.height) {
+                dinoState.y = dinoState.groundY - dinoState.height;
+            }
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+
+        function initDinoGame() {
+            resizeCanvas();
+            resetDinoGame();
+            animateDinoGame();
+        }
+
+        function resetDinoGame() {
+            obstacles = [];
+            score = 0;
+            dinoState.y = dinoState.groundY - dinoState.height;
+            dinoState.velocity = 0;
+            dinoState.isJumping = false;
+            dinoState.stumble = false;
+            dinoState.stumbleTimer = 0;
+            gameSpeed = 3.5;
+            spawnObstacle();
+        }
+
+        // บังคับให้ไดโนเสาร์กระโดดข้ามสิ่งกีดขวาง
+        function triggerDinoJump() {
+            if (!dinoState.isJumping && dinoState.stumbleTimer <= 0) {
+                dinoState.velocity = dinoState.jumpPower;
+                dinoState.isJumping = true;
+                
+                const label = document.getElementById('gameStatusLabel');
+                label.innerText = "DINO JUMPED!";
+                label.className = "absolute top-2 right-3 text-xs font-mono text-indigo-500 font-bold bg-indigo-50 dark:bg-indigo-950/50 px-2 py-0.5 rounded";
+                label.classList.remove('hidden');
+                setTimeout(() => label.classList.add('hidden'), 700);
+            }
+        }
+
+        // สุ่มสร้างต้นกระบองเพชร
+        function spawnObstacle() {
+            if (canvas.width <= 0) return;
+            
+            const minSpacing = 280;
+            const maxSpacing = 450;
+            const lastObstacleX = obstacles.length > 0 ? obstacles[obstacles.length - 1].x : canvas.width;
+            
+            if (lastObstacleX < canvas.width + 50) {
+                const height = Math.floor(Math.random() * 15) + 18;
+                obstacles.push({
+                    x: canvas.width + Math.random() * (maxSpacing - minSpacing) + minSpacing,
+                    y: dinoState.groundY - height,
+                    width: 14,
+                    height: height
+                });
+            }
+        }
+
+        // คลื่นเสียงเตือนเมื่อพิมพ์ผิด (Web Audio API สแตนด์อโลน)
+        function playErrorSound() {
+            try {
+                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const oscillator = audioCtx.createOscillator();
+                const gainNode = audioCtx.createGain();
+
+                oscillator.type = 'sawtooth';
+                oscillator.frequency.setValueAtTime(140, audioCtx.currentTime);
+                
+                gainNode.gain.setValueAtTime(0.12, audioCtx.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
+
+                oscillator.connect(gainNode);
+                gainNode.connect(audioCtx.destination);
+
+                oscillator.start();
+                oscillator.stop(audioCtx.currentTime + 0.15);
+            } catch (e) {
+                console.log("Audio Context is not active:", e);
+            }
+        }
+
+        // วาดภาพแอนิเมชันลูปของเกม
+        function animateDinoGame() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            const isDark = document.documentElement.classList.contains('dark');
+            const themeColors = {
+                sky: isDark ? '#0f172a' : '#f8fafc',
+                ground: isDark ? '#475569' : '#cbd5e1',
+                dino: isDark ? '#a5b4fc' : '#4f46e5',
+                dinoStumble: '#ef4444',
+                cactus: isDark ? '#65a30d' : '#15803d',
+                decor: isDark ? '#334155' : '#e2e8f0'
+            };
+
+            ctx.fillStyle = themeColors.sky;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            ctx.fillStyle = themeColors.decor;
+            ctx.fillRect(canvas.width * 0.3, 15, 20, 6);
+            ctx.fillRect(canvas.width * 0.7, 30, 25, 7);
+
+            ctx.strokeStyle = themeColors.ground;
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(0, dinoState.groundY);
+            ctx.lineTo(canvas.width, dinoState.groundY);
+            ctx.stroke();
+
+            // คำนวณฟิสิกส์การตกลงพื้นดิน
+            if (dinoState.isJumping) {
+                dinoState.velocity += dinoState.gravity;
+                dinoState.y += dinoState.velocity;
+
+                if (dinoState.y >= dinoState.groundY - dinoState.height) {
+                    dinoState.y = dinoState.groundY - dinoState.height;
+                    dinoState.isJumping = false;
+                    dinoState.velocity = 0;
+                }
+            }
+
+            if (dinoState.stumbleTimer > 0) {
+                dinoState.stumbleTimer--;
+                if (dinoState.stumbleTimer === 0) {
+                    dinoState.stumble = false;
+                }
+            }
+
+            dinoState.animationFrame += 0.15;
+            const legOffset = Math.floor(dinoState.animationFrame) % 2;
+
+            ctx.save();
+            ctx.translate(dinoState.x, dinoState.y);
+
+            if (dinoState.stumble) {
+                ctx.fillStyle = themeColors.dinoStumble;
+                ctx.rotate((Math.sin(Date.now() / 50) * 15 * Math.PI) / 180);
+            } else {
+                ctx.fillStyle = themeColors.dino;
+            }
+
+            ctx.fillRect(4, 8, 14, 12);
+            ctx.fillRect(0, 12, 4, 6);
+            ctx.fillRect(12, 0, 10, 8);
+            ctx.fillRect(20, 2, 4, 4); 
+
+            ctx.fillStyle = isDark ? '#000000' : '#ffffff';
+            if (dinoState.stumble) {
+                ctx.strokeStyle = isDark ? '#ffffff' : '#000000';
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                ctx.moveTo(14, 2); ctx.lineTo(17, 5);
+                ctx.moveTo(17, 2); ctx.lineTo(14, 5);
+                ctx.stroke();
+            } else {
+                ctx.fillRect(15, 2, 2, 2);
+            }
+
+            ctx.fillStyle = isDark ? '#a5b4fc' : '#4f46e5';
+            if (dinoState.isJumping) {
+                ctx.fillRect(6, 20, 2, 4);
+                ctx.fillRect(12, 20, 2, 4);
+            } else {
+                ctx.fillRect(6, 20, 2, legOffset === 0 ? 5 : 2);
+                ctx.fillRect(12, 20, 2, legOffset === 1 ? 5 : 2);
+            }
+
+            if (dinoState.stumble) {
+                ctx.fillStyle = 'rgba(239, 68, 68, 0.4)';
+                ctx.beginPath();
+                ctx.arc(-2, 18, 5, 0, Math.PI * 2);
+                ctx.arc(-8, 14, 3, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            ctx.restore();
+
+            spawnObstacle();
+
+            for (let i = obstacles.length - 1; i >= 0; i--) {
+                const obs = obstacles[i];
+                obs.x -= gameSpeed;
+
+                ctx.fillStyle = themeColors.cactus;
+                ctx.fillRect(obs.x + 4, obs.y, 6, obs.height);
+                ctx.fillRect(obs.x, obs.y + 6, 4, 3);
+                ctx.fillRect(obs.x, obs.y + 3, 2, 5);
+                ctx.fillRect(obs.x + 10, obs.y + 9, 4, 3);
+                ctx.fillRect(obs.x + 12, obs.y + 6, 2, 5);
+
+                const dinoBox = {
+                    left: dinoState.x,
+                    right: dinoState.x + dinoState.width,
+                    top: dinoState.y,
+                    bottom: dinoState.y + dinoState.height
+                };
+
+                const obsBox = {
+                    left: obs.x,
+                    right: obs.x + obs.width,
+                    top: obs.y,
+                    bottom: obs.y + obs.height
+                };
+
+                if (dinoBox.right > obsBox.left &&
+                    dinoBox.left < obsBox.right &&
+                    dinoBox.bottom > obsBox.top &&
+                    dinoBox.top < obsBox.bottom) {
+                    
+                    dinoState.stumble = true;
+                    dinoState.stumbleTimer = 50; 
+                    dinoState.velocity = -2.5; 
+                    dinoState.isJumping = true;
+                    playErrorSound(); // เล่นเสียงบัสเซอร์เมื่อชนต้นไม้
+                    obs.x -= 30; 
+                }
+
+                if (obs.x + obs.width < 0) {
+                    obstacles.splice(i, 1);
+                }
+            }
+
+            animationFrameId = requestAnimationFrame(animateDinoGame);
+        }
+    </script>
+</body>
+</html>
