@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sci-Week Game Vote Station</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        body {
+            font-family: 'Prompt', 'Kanit', 'Arial', sans-serif;
+            background-color: #0b0f19;
+            background-image: 
+                radial-gradient(at 20% 20%, #1e1b4b 0px, transparent 50%),
+                radial-gradient(at 80% 80%, #0f172a 0px, transparent 50%);
+            color: #ffffff;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            padding: 20px;
+            overflow-x: hidden;
+        }
+
+        /* Header Style */
+        .header {
+            width: 100%;
+            max-width: 450px;
+            text-align: center;
+            margin-top: 10px;
+            background: rgba(30, 41, 59, 0.4);
+            border: 1px solid rgba(56, 189, 248, 0.2);
+            padding: 15px;
+            border-radius: 16px;
+            backdrop-filter: blur(8px);
+        }
+
+        .header h1 {
+            font-size: 1.6rem;
+            color: #38bdf8;
+            text-shadow: 0 0 10px rgba(56, 189, 248, 0.5);
+            margin-bottom: 5px;
+        }
+
+        .header p {
+            font-size: 0.9rem;
+            color: #94a3b8;
+        }
+
+        /* Screen Wrapper for transitions */
+        .screen {
+            width: 100%;
+            max-width: 450px;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            flex-grow: 1;
+            justify-content: center;
+            margin: 15px 0;
+        }
+
+        .screen.active {
+            display: flex;
+        }
+
+        /* Game Selection Menu */
+        .select-instruction {
+            font-size: 1.2rem;
+            color: #a7f3d0;
+            margin-bottom: 15px;
+            font-weight: bold;
+            text-align: center;
+        }
+
+        .game-list-container {
+            width: 100%;
+            max-height: 50vh;
+            overflow-y: auto;
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .game-select-item {
+            width: 100%;
+            background: rgba(30, 41, 59, 0.8);
+            border: 1px solid rgba(56, 189, 248, 0.2);
+            border-radius: 12px;
+            padding: 15px;
+            text-align: left;
+            color: white;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .game-select-item:active {
+            transform: scale(0.98);
+            background: rgba(56, 189, 248, 0.2);
+        }
+
+        .item-title {
+            font-size: 1.2rem;
+            color: #f59e0b;
+            font-weight: bold;
+            margin-bottom: 4px;
+        }
+
+        .item-dev {
+            font-size: 0.9rem;
+            color: #94a3b8;
+        }
+
+        /* Info Display Card */
+        .info-card {
+            width: 100%;
+            background: linear-gradient(135deg, #1e1b4b 0%, #0f172a 100%);
+            border: 2px solid #38bdf8;
+            box-shadow: 0 0 20px rgba(56, 189, 248, 0.2);
+            border-radius: 24px;
+            padding: 25px 20px;
+            text-align: center;
+            margin-bottom: 20px;
+            position: relative;
+        }
+
+        .back-btn {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            background: rgba(255,255,255,0.1);
+            border: none;
+            color: #94a3b8;
+            padding: 5px 10px;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            cursor: pointer;
+        }
+
+        .game-title {
+            font-size: 1.8rem;
+            color: #f59e0b;
+            margin-bottom: 8px;
+            font-weight: bold;
+            text-shadow: 0 0 8px rgba(245, 158, 11, 0.3);
+            line-height: 1.2;
+            margin-top: 15px;
+        }
+
+        .dev-team {
+            font-size: 1rem;
+            color: #cbd5e1;
+            margin-bottom: 5px;
+        }
+
+        /* Voting System Area */
+        .vote-section {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .vote-instruction {
+            text-align: center;
+            font-size: 1.1rem;
+            color: #a7f3d0;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .star-button {
+            width: 100%;
+            background: rgba(30, 41, 59, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            color: white;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            outline: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .star-button:active {
+            transform: scale(0.97);
+        }
+
+        .star-button.btn-5 { border-left: 6px solid #ef4444; }
+        .star-button.btn-4 { border-left: 6px solid #f59e0b; }
+        .star-button.btn-3 { border-left: 6px solid #10b981; }
+        .star-button.btn-2 { border-left: 6px solid #3b82f6; }
+        .star-button.btn-1 { border-left: 6px solid #6366f1; }
+
+        .star-button:active.btn-5 { background: rgba(239, 68, 68, 0.2); border-color: #ef4444; }
+        .star-button:active.btn-4 { background: rgba(245, 158, 11, 0.2); border-color: #f59e0b; }
+        .star-button:active.btn-3 { background: rgba(16, 185, 129, 0.2); border-color: #10b981; }
+        .star-button:active.btn-2 { background: rgba(59, 130, 246, 0.2); border-color: #3b82f6; }
+        .star-button:active.btn-1 { background: rgba(99, 102, 241, 0.2); border-color: #6366f1; }
+
+        .stars-display {
+            color: #f59e0b;
+            font-size: 1.2rem;
+            letter-spacing: 1px;
+        }
+
+        /* Footer Utilities */
+        .footer-utils {
+            width: 100%;
+            max-width: 450px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            font-size: 0.8rem;
+            color: #64748b;
+        }
+
+        .settings-btn {
+            background: none;
+            border: none;
+            color: #64748b;
+            font-size: 1.2rem;
+            cursor: pointer;
+            padding: 5px;
+        }
+
+        /* Modal Overlay */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(5px);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .modal-content {
+            background: #1e293b;
+            border: 2px solid #38bdf8;
+            border-radius: 20px;
+            width: 100%;
+            max-width: 400px;
+            padding: 25px;
+            position: relative;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        .modal-title {
+            font-size: 1.3rem;
+            color: #38bdf8;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 0.85rem;
+            color: #94a3b8;
+            margin-bottom: 5px;
+        }
+
+        .form-group input {
+            width: 100%;
+            background: #0f172a;
+            border: 1px solid #475569;
+            border-radius: 8px;
+            padding: 10px;
+            color: white;
+            font-size: 0.9rem;
+            outline: none;
+        }
+
+        .form-group input:focus {
+            border-color: #38bdf8;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 10px;
+            border-radius: 8px;
+            border: none;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+
+        .btn-primary { background: #38bdf8; color: #0f172a; }
+        .btn-secondary { background: #475569; color: white; }
+
+        /* Status Toast */
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: #10b981;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 30px;
+            font-weight: bold;
+            box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            z-index: 2000;
+            pointer-events: none;
+            white-space: nowrap;
+        }
+
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+        }
+
+        /* Particle Canvas */
+        #particleCanvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 999;
+        }
+
+        /* Loading Animation */
+        .loading-dots span {
+            animation: blink 1.4s infinite both;
+        }
+        .loading-dots span:nth-child(2) { animation-delay: .2s; }
+        .loading-dots span:nth-child(3) { animation-delay: .4s; }
+
+        @keyframes blink {
+            0% { opacity: .2; }
+            20% { opacity: 1; }
+            100% { opacity: .2; }
+        }
+    </style>
+</head>
+<body>
+
+    <canvas id="particleCanvas"></canvas>
+
+    <!-- ส่วนหัวแอป -->
+    <div class="header">
+        <h1>SCIENCE WEEK 2026</h1>
+        <p>สถานีลงคะแนนโหวตโครงงานเกมคอมพิวเตอร์</p>
+    </div>
+
+    <!-- หน้าที่ 1: หน้าเลือกเกม -->
+    <div class="screen active" id="selectionScreen">
+        <div class="select-instruction">👾 เลือกเกมที่น้องๆ เพิ่งเล่นมาได้เลยครับ 👾</div>
+        <div class="game-list-container" id="gameList">
+            <!-- ดึงรายการเกมมาแสดงผลที่นี่ -->
+            <div style="text-align:center; padding:20px; color:#94a3b8;">
+                กำลังโหลดรายการเกม<span class="loading-dots"><span>.</span><span>.</span><span>.</span></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- หน้าที่ 2: หน้าให้คะแนนเกมที่เลือก -->
+    <div class="screen" id="voteScreen">
+        <div class="info-card">
+            <button class="back-btn" onclick="showSelectionScreen()">⬅️ เปลี่ยนเกม</button>
+            <div class="game-title" id="displayTitle">ชื่อเกม</div>
+            <div class="dev-team" id="displayDev">ผู้พัฒนา</div>
+        </div>
+
+        <div class="vote-section">
+            <div class="vote-instruction">🚀 เล่นสนุกไหม? ให้ดาวพี่ๆ เลย! 🚀</div>
+            
+            <button class="star-button btn-5" onclick="submitVote(5)">
+                <span>🤩 สนุกสุดยอด!</span>
+                <span class="stars-display">⭐⭐⭐⭐⭐</span>
+            </button>
+
+            <button class="star-button btn-4" onclick="submitVote(4)">
+                <span>😊 ชอบมากเลย</span>
+                <span class="stars-display">⭐⭐⭐⭐</span>
+            </button>
+
+            <button class="star-button btn-3" onclick="submitVote(3)">
+                <span>👍 สนุกดีนะ</span>
+                <span class="stars-display">⭐⭐⭐</span>
+            </button>
+
+            <button class="star-button btn-2" onclick="submitVote(2)">
+                <span>😐 พอใช้ได้</span>
+                <span class="stars-display">⭐⭐</span>
+            </button>
+
+            <button class="star-button btn-1" onclick="submitVote(1)">
+                <span>💡 พัฒนาอีกนิด</span>
+                <span class="stars-display">⭐</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- เครื่องมือท้ายแถว -->
+    <div class="footer-utils">
+        <span id="connectionStatus">🔄 ตรวจสอบโหมดออฟไลน์...</span>
+        <button class="settings-btn" onclick="openSettings()">⚙️</button>
+    </div>
+
+    <!-- หน้าต่างตั้งค่า (Modal) -->
+    <div class="modal" id="settingsModal">
+        <div class="modal-content">
+            <div class="modal-title">ตั้งค่าการเชื่อมต่อระบบ</div>
+            <div class="form-group">
+                <label>Google Web App URL (ที่ Deploy มา):</label>
+                <input type="text" id="scriptUrlInput" placeholder="https://script.google.com/macros/s/.../exec">
+            </div>
+            <p style="font-size: 0.75rem; color: #94a3b8; margin-top: -10px; margin-bottom: 15px; line-height: 1.4;">
+                *กำหนดค่าชื่อเกมในแผ่นงานแรกของ Google Sheet คอลัมน์ A (ชื่อเกม) คอลัมน์ B (ชื่อผู้พัฒนา) เริ่มต้นจากแถวที่ 2 เป็นต้นไป
+            </p>
+            <div class="modal-buttons">
+                <button class="btn btn-secondary" onclick="closeSettings()">ยกเลิก</button>
+                <button class="btn btn-primary" onclick="saveSettings()">บันทึกข้อมูล</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- แจ้งเตือนสั้น (Toast) -->
+    <div class="toast" id="statusToast">🎉 บันทึกคะแนนเรียบร้อย! ขอบคุณครับ 🎉</div>
+
+    <script>
+        const DEFAULT_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz-7CjAgM2viL010G7lymeHXz86mRWcb90mbWZEfe6WqwA3dupDjwHCAPND15RHPS8m/exec"; 
+        let GOOGLE_SCRIPT_URL = localStorage.getItem('script_url') || DEFAULT_SCRIPT_URL;
+        
+        let gamesData = []; // เก็บรายการเกมทั้งหมดที่ดึงมา
+        let selectedGame = null; // เกมที่ถูกเลือก ณ ปัจจุบัน
+
+        // รายการข้อมูลจำลองสำหรับกรณีออฟไลน์
+        const offlineGames = [
+            { title: "ซุ้มตะลุยอวกาศพิชิตภายนอก", developer: "กลุ่มนวัตกรรมเยาวชน AI ม.3" },
+            { title: "เกาะวิทยาศาตร์หรรษา", developer: "ทีมงานวิทย์คอม ม.2" },
+            { title: "ห้องแล็บเคมีทดลองมหาสนุก", developer: "ด.ช.สมชาย และ ด.ญ.สมศรี" }
+        ];
+
+        window.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('scriptUrlInput').value = GOOGLE_SCRIPT_URL;
+            fetchGamesList();
+            initParticles();
+        });
+
+        // ดึงรายการเกมจาก Google Sheets
+        function fetchGamesList() {
+            if (!GOOGLE_SCRIPT_URL) {
+                useOfflineData("โหมดออฟไลน์ (เปิดใช้ในเครื่อง)");
+                return;
+            }
+
+            document.getElementById('connectionStatus').innerText = "📡 กำลังดึงรายชื่อเกม...";
+            
+            fetch(GOOGLE_SCRIPT_URL)
+                .then(response => response.json())
+                .then(data => {
+                    if(data.status === "success" && data.games && data.games.length > 0) {
+                        gamesData = data.games;
+                        renderGamesMenu();
+                        document.getElementById('connectionStatus').innerText = "🟢 ออนไลน์ (Google Sheet)";
+                    } else {
+                        useOfflineData("ข้อมูลไม่ถูกต้อง เปลี่ยนเป็นโหมดจำลอง");
+                    }
+                })
+                .catch(err => {
+                    console.error(err);
+                    useOfflineData("🟠 ออฟไลน์ (โหลดข้อมูลจากส่วนกลางไม่สำเร็จ)");
+                });
+        }
+
+        function useOfflineData(statusMessage) {
+            gamesData = offlineGames;
+            renderGamesMenu();
+            document.getElementById('connectionStatus').innerText = statusMessage;
+        }
+
+        // วาดรายการเกมบนเมนูหน้าแรก
+        function renderGamesMenu() {
+            const container = document.getElementById('gameList');
+            container.innerHTML = "";
+            
+            gamesData.forEach((game, index) => {
+                const item = document.createElement('div');
+                item.className = "game-select-item";
+                item.onclick = () => selectGame(index);
+                
+                item.innerHTML = `
+                    <div class="item-title">${game.title}</div>
+                    <div class="item-dev">โดย: ${game.developer}</div>
+                `;
+                container.appendChild(item);
+            });
+        }
+
+        // เลือกเกมและสลับหน้าจอไปหน้าลงคะแนน
+        function selectGame(index) {
+            selectedGame = gamesData[index];
+            document.getElementById('displayTitle').innerText = selectedGame.title;
+            document.getElementById('displayDev').innerText = "ผู้พัฒนา: " + selectedGame.developer;
+            
+            document.getElementById('selectionScreen').classList.remove('active');
+            document.getElementById('voteScreen').classList.add('active');
+            playVoteSound(3); // เล่นเสียงทักทายเมื่อเข้าหน้าเกม
+        }
+
+        function showSelectionScreen() {
+            selectedGame = null;
+            document.getElementById('voteScreen').classList.remove('active');
+            document.getElementById('selectionScreen').classList.add('active');
+        }
+
+        // ฟังก์ชันส่งคะแนน
+        let isSubmitting = false;
+        function submitVote(stars) {
+            if (isSubmitting || !selectedGame) return;
+            isSubmitting = true;
+
+            burstParticles(stars * 8);
+            playVoteSound(stars);
+
+            const payload = {
+                stars: stars,
+                message: getFeedbackMessage(stars),
+                boothTitle: selectedGame.title,
+                developer: selectedGame.developer
+            };
+
+            showToast(`⭐ ให้คะแนนเกม "${selectedGame.title}" เรียบร้อย!`);
+
+            // หลังจากเด็กๆ โหวตเสร็จ สลับหน้าจอกลับมาหน้าแรกภายใน 1.5 วินาทีเพื่อให้คนต่อไปโหวตได้
+            setTimeout(() => {
+                showSelectionScreen();
+                isSubmitting = false;
+            }, 1500);
+
+            if (!GOOGLE_SCRIPT_URL) {
+                let localVotes = JSON.parse(localStorage.getItem('local_votes') || "[]");
+                localVotes.push({timestamp: new Date(), ...payload});
+                localStorage.setItem('local_votes', JSON.stringify(localVotes));
+                return;
+            }
+
+            fetch(GOOGLE_SCRIPT_URL, {
+                method: "POST",
+                mode: "no-cors",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload)
+            }).catch(err => console.error("บันทึกไม่สำเร็จ: ", err));
+        }
+
+        function getFeedbackMessage(stars) {
+            const msgs = { 5: "สนุกสุดยอด!", 4: "ชอบมากเลย", 3: "สนุกดีนะ", 2: "พอใช้ได้", 1: "พัฒนาอีกนิด" };
+            return msgs[stars] || "";
+        }
+
+        // --- ตั้งค่า Modal ---
+        function openSettings() { document.getElementById('settingsModal').style.display = 'flex'; }
+        function closeSettings() { document.getElementById('settingsModal').style.display = 'none'; }
+        function saveSettings() {
+            const urlValue = document.getElementById('scriptUrlInput').value.trim();
+            localStorage.setItem('script_url', urlValue);
+            GOOGLE_SCRIPT_URL = urlValue;
+            closeSettings();
+            fetchGamesList();
+        }
+
+        function showToast(text) {
+            const toast = document.getElementById('statusToast');
+            toast.innerText = text;
+            toast.classList.add('show');
+            setTimeout(() => { toast.classList.remove('show'); }, 2200);
+        }
+
+        // --- ระบบเสียงเรโทร (Web Audio API) ---
+        function playVoteSound(stars) {
+            try {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                if (!AudioContext) return;
+                const ctx = new AudioContext();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                
+                osc.type = 'triangle';
+                const baseFreq = 300 + (stars * 90);
+                osc.frequency.setValueAtTime(baseFreq, ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(baseFreq * 1.8, ctx.currentTime + 0.25);
+                
+                gain.gain.setValueAtTime(0.25, ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+                
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start();
+                osc.stop(ctx.currentTime + 0.3);
+            } catch (e) {}
+        }
+
+        // --- ระบบเอฟเฟกต์พลุดาวกระจาย (Particle) ---
+        const canvas = document.getElementById('particleCanvas');
+        const ctx = canvas.getContext('2d');
+        let particles = [];
+
+        function initParticles() {
+            resizeCanvas();
+            window.addEventListener('resize', resizeCanvas);
+            animateParticles();
+        }
+        function resizeCanvas() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+
+        class Particle {
+            constructor(x, y) {
+                this.x = x; this.y = y;
+                this.size = Math.random() * 5 + 3;
+                this.speedX = (Math.random() - 0.5) * 8;
+                this.speedY = (Math.random() - 0.5) * 8 - 2;
+                this.color = `hsl(${Math.random() * 40 + 35}, 100%, 60%)`;
+                this.alpha = 1;
+                this.decay = Math.random() * 0.02 + 0.02;
+            }
+            update() { this.x += this.speedX; this.y += this.speedY; this.speedY += 0.12; this.alpha -= this.decay; }
+            draw() {
+                ctx.save(); ctx.globalAlpha = this.alpha; ctx.fillStyle = this.color; ctx.beginPath();
+                ctx.moveTo(this.x, this.y - this.size); ctx.lineTo(this.x + this.size, this.y);
+                ctx.lineTo(this.x, this.y + this.size); ctx.lineTo(this.x - this.size, this.y);
+                ctx.closePath(); ctx.fill(); ctx.restore();
+            }
+        }
+
+        function burstParticles(count) {
+            const startX = canvas.width / 2; const startY = canvas.height * 0.5;
+            for (let i = 0; i < count; i++) { particles.push(new Particle(startX, startY)); }
+        }
+
+        function animateParticles() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            for (let i = particles.length - 1; i >= 0; i--) {
+                particles[i].update(); particles[i].draw();
+                if (particles[i].alpha <= 0) { particles.splice(i, 1); }
+            }
+            requestAnimationFrame(animateParticles);
+        }
+    </script>
+</body>
+</html>
